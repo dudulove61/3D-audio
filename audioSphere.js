@@ -1,16 +1,21 @@
+// --- 初始化渲染器 ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-camera.position.z = 280;
-camera.position.y = 80;
+camera.position.set(0, 80, 280);
 
 const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-orbit.enableDamping = true; 
+orbit.enableDamping = true;
 
-// 材质设置
+// --- 性能监控 (可选) ---
+const stats = new Stats();
+// document.body.appendChild(stats.domElement); // 如需查看性能请取消注释
+
+// --- 粒子系统配置 ---
 const particleMaterial = new THREE.PointsMaterial({
     size: 5,
     map: new THREE.TextureLoader().load('res/particle.png'),
@@ -30,8 +35,8 @@ for (let i = -1; i <= 1; i += step) {
     const theta = (120 * phi) % (2 * Math.PI);
     const particle = new THREE.Vector3();
     particle.x = particle.initX = Math.cos(theta) * Math.sin(phi) * radius;
-    particle.z = particle.initZ = Math.sin(theta) * Math.sin(phi) * radius;
     particle.y = particle.initY = Math.cos(phi) * radius;
+    particle.z = particle.initZ = Math.sin(theta) * Math.sin(phi) * radius;
     particles.vertices.push(particle);
     particles.colors.push(new THREE.Color(0x00f2fe)); 
 }
@@ -39,20 +44,34 @@ for (let i = -1; i <= 1; i += step) {
 const particleSystem = new THREE.Points(particles, particleMaterial);
 scene.add(particleSystem);
 
-let analyser, frequencyData;
+// --- 音频处理逻辑 ---
+let analyser, frequencyData, audioCtx;
 const audioEl = document.getElementById('audio');
 const playBtn = document.getElementById('play');
 const audioContainer = document.getElementById('audio-container');
 
-function fetchNewTrack() {
-    // 部署到 Vercel 请确保使用了 vercel.json 代理
-    audioEl.src = '/api/dj-stream?t=' + Date.now();
+// 这里替换为你 R2 的链接
+const R2_URL = "https://pub-your-id.r2.dev/music.mp3"; 
+
+function initAudioSource() {
+    // 关键：对于 R2 直连，必须设置 crossOrigin 以允许 AnalyserNode 读取数据
+    audioEl.crossOrigin = "anonymous"; 
+    audioEl.src = R2_URL;
     audioEl.load();
 }
 
-playBtn.addEventListener('click', () => {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+playBtn.addEventListener('click', async function() {
+    // 1. 兼容性初始化 AudioContext
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     
+    // 2. 强制恢复上下文（解决手机端点击后不跳的问题）
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+
+    // 3. 建立节点连接
     if (!analyser) {
         analyser = audioCtx.createAnalyser();
         const source = audioCtx.createMediaElementSource(audioEl);
@@ -61,44 +80,63 @@ playBtn.addEventListener('click', () => {
         analyser.fftSize = 1024;
         frequencyData = new Uint8Array(analyser.frequencyBinCount);
     }
-    
-    fetchNewTrack();
+
+    initAudioSource();
+
+    // 4. 执行播放
     audioEl.play().then(() => {
-        // 播放成功后隐藏按钮，显示播放器
         playBtn.style.display = 'none';
         if(audioContainer) audioContainer.style.display = 'flex'; 
     }).catch(err => {
-        console.error("播放失败:", err);
-        // 如果失败了，尝试再次加载
-        fetchNewTrack();
+        console.error("Audio Playback Failed:", err);
+        alert("请确保手机未处于静音模式并再次尝试");
     });
 });
 
-audioEl.onended = () => { fetchNewTrack(); audioEl.play(); };
-
+// --- 渲染循环 ---
 function render() {
     requestAnimationFrame(render);
-    if (frequencyData) {
+    stats.begin();
+
+    if (frequencyData && !audioEl.paused) {
         analyser.getByteFrequencyData(frequencyData);
-        for (let i = 0; i < particles.vertices.length; i++) {
-            let p = particles.vertices[i];
+        
+        const vertices = particles.vertices;
+        const colors = particles.colors;
+
+        for (let i = 0; i < vertices.length; i++) {
+            const p = vertices[i];
             const index = i % frequencyData.length;
-            const factor = (frequencyData[index] / 255) * 2.2 + 1;
+            
+            // 计算跳动幅度 (0.0 ~ 1.0)
+            const amplitude = frequencyData[index] / 255;
+            const factor = amplitude * 2.2 + 1;
+
             p.x = p.initX * factor;
             p.y = p.initY * factor;
             p.z = p.initZ * factor;
-            let hue = (index / frequencyData.length) + (frequencyData[index] / 512);
-            particles.colors[i].setHSL(hue % 1, 0.7, 0.6); 
+
+            // 颜色变化：基于频谱位置和当前强度
+            const hue = (index / frequencyData.length) + (amplitude * 0.2);
+            colors[i].setHSL(hue % 1, 0.7, 0.6); 
         }
+        
+        // 告知 Three.js 顶点和颜色已更新
         particleSystem.geometry.verticesNeedUpdate = true;
         particleSystem.geometry.colorsNeedUpdate = true;
     }
+
+    // 基础旋转
     particleSystem.rotation.y += 0.003;
+    
     orbit.update();
     renderer.render(scene, camera);
+    stats.end();
 }
+
 render();
 
+// --- 窗口适配 ---
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
