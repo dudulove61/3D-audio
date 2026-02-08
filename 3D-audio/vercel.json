@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/dj-stream",
-      "destination": "http://api.yujn.cn/api/dj.php"
-    }
-  ]
-}
