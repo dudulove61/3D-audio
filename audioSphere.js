@@ -7,8 +7,9 @@ document.body.appendChild(renderer.domElement);
 camera.position.z = 270;
 camera.position.y = 100;
 
+// 控制器设置
 const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-orbit.enableDamping = true; // 增加滑动感
+orbit.enableDamping = true; 
 
 /* 粒子系统设置 */
 const particles = new THREE.Geometry();
@@ -42,24 +43,37 @@ let analyser, frequencyData;
 const audioEl = document.getElementById('audio');
 const playBtn = document.getElementById('play');
 
+// 核心修正：配合 vercel.json 使用代理路径解决跨域拦截
 function fetchNewTrack() {
-    // 使用 HTTPS 尝试连接 API，避免 Vercel 报错
-    const apiUrl = 'https://api.yujn.cn/api/dj.php?t=' + Date.now();
+    // 这里的 /api/dj-stream 必须与 vercel.json 中的 source 一致
+    const apiUrl = '/api/dj-stream?t=' + Date.now();
     audioEl.src = apiUrl;
     audioEl.load();
 }
 
 playBtn.addEventListener('click', () => {
+    // 启动 AudioContext
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    const source = audioCtx.createMediaElementSource(audioEl);
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    analyser.fftSize = 2048; // 调小一点让反应更灵敏
-    frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    
+    // 如果还没创建分析器，则初始化
+    if (!analyser) {
+        analyser = audioCtx.createAnalyser();
+        const source = audioCtx.createMediaElementSource(audioEl);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        analyser.fftSize = 1024; // 调整 fftSize 提高跳动灵敏度
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    }
 
     fetchNewTrack();
-    audioEl.play();
+    
+    // 尝试播放（处理浏览器异步策略）
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.error("播放失败，请检查网络或 API 状态:", error);
+        });
+    }
 
     playBtn.style.display = 'none';
     audioEl.style.display = 'block';
@@ -73,25 +87,33 @@ audioEl.onended = () => {
 
 function render() {
     requestAnimationFrame(render);
+    
     if (frequencyData) {
         analyser.getByteFrequencyData(frequencyData);
         for (let i = 0; i < particles.vertices.length; i++) {
             let particle = particles.vertices[i];
-            // 根据频率缩放粒子位置
-            const index = i % 512; 
-            const factor = (frequencyData[index] / 255) * 1.2 + 1;
+            
+            // 将 4000 个点映射到 512 个频谱数据点上
+            const index = i % frequencyData.length; 
+            const amplitude = frequencyData[index];
+            
+            // 计算缩放系数，这里的 1.5 和 1 是可以调节的灵敏度参数
+            const factor = (amplitude / 255) * 1.5 + 1;
+            
             particle.x = particle.initX * factor;
             particle.y = particle.initY * factor;
             particle.z = particle.initZ * factor;
         }
         particleSystem.geometry.verticesNeedUpdate = true;
     }
-    particleSystem.rotation.y += 0.002; // 自动慢转
+    
+    particleSystem.rotation.y += 0.002; // 球体缓慢自转
     orbit.update();
     renderer.render(scene, camera);
 }
 render();
 
+// 窗口大小适配
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
