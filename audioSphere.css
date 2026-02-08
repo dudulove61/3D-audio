@@ -4,7 +4,7 @@ body {
     background: radial-gradient(circle at center, #1a0a2e 0%, #000000 100%); 
 }
 
-/* 启动按钮：确保在最前方 */
+/* 启动按钮 */
 #play {
     position: fixed; 
     top: 50%; 
@@ -22,26 +22,46 @@ body {
     font-weight: bold;
     font-size: 18px;
     box-shadow: 0 0 40px rgba(255, 0, 204, 0.8); 
-    z-index: 9999; /* 极高级别，确保可见 */
+    z-index: 9999;
     display: block;
 }
 
 /* 底部播放器容器 */
 #audio-container {
     position: fixed;
-    bottom: 0; /* 先设为 0，确保你能看到它 */
+    bottom: 0; 
     left: 0;
     width: 100%;
     background: rgba(0, 0, 0, 0.7); 
     backdrop-filter: blur(15px);
     padding: 15px 0;
-    display: none; /* 初始隐藏，点击 Play 后变为 flex */
+    display: none; /* 由 JS 切换为 flex */
     justify-content: center;
+    align-items: center;
     z-index: 1000;
 }
 
+/* 下一曲按钮样式 */
+#next-btn {
+    color: #ff00cc;
+    border: 1px solid #ff00cc;
+    padding: 5px 15px;
+    margin-right: 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: sans-serif;
+    font-size: 14px;
+    transition: 0.3s;
+    white-space: nowrap;
+}
+#next-btn:hover {
+    background: #ff00cc;
+    color: white;
+    box-shadow: 0 0 15px #ff00cc;
+}
+
 audio {
-    width: 80%;
+    width: 60%;
     filter: invert(1) hue-rotate(180deg);
 }
 
@@ -50,7 +70,9 @@ audio {
     bottom: 80px; 
     width: 100%;
     text-align: center; 
-    color: rgba(255,255,255,0.4); 
+    color: rgba(255,255,255,0.7); 
     z-index: 10;
     pointer-events: none;
+    font-family: sans-serif;
+    letter-spacing: 1px;
 }
