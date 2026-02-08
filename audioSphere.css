@@ -18,12 +18,16 @@ body {
     border-radius: 30px; 
     cursor: pointer;
     text-align: center; 
-    font-family: "Microsoft YaHei", sans-serif; 
+    font-family: sans-serif; 
     font-weight: bold;
     font-size: 18px;
     box-shadow: 0 0 40px rgba(255, 0, 204, 0.8); 
     z-index: 9999;
-    display: block;
+    transition: 0.3s;
+}
+
+#play:hover {
+    transform: translate(-50%, -50%) scale(1.1);
 }
 
 /* 底部播放器容器 */
@@ -34,35 +38,36 @@ body {
     width: 100%;
     background: rgba(0, 0, 0, 0.7); 
     backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     padding: 15px 0;
-    display: none; /* 由 JS 切换为 flex */
+    display: none; 
     justify-content: center;
     align-items: center;
     z-index: 1000;
 }
 
-/* 下一曲按钮样式 */
+/* 下一曲按钮 */
 #next-btn {
-    color: #ff00cc;
-    border: 1px solid #ff00cc;
+    color: #00f2fe;
+    border: 1px solid #00f2fe;
     padding: 5px 15px;
     margin-right: 20px;
     border-radius: 20px;
     cursor: pointer;
-    font-family: sans-serif;
     font-size: 14px;
     transition: 0.3s;
     white-space: nowrap;
+    text-shadow: 0 0 5px #00f2fe;
 }
+
 #next-btn:hover {
-    background: #ff00cc;
-    color: white;
-    box-shadow: 0 0 15px #ff00cc;
+    background: #00f2fe;
+    color: black;
 }
 
 audio {
     width: 60%;
-    filter: invert(1) hue-rotate(180deg);
+    filter: invert(1) hue-rotate(180deg) brightness(1.5);
 }
 
 #info {
@@ -73,6 +78,30 @@ audio {
     color: rgba(255,255,255,0.7); 
     z-index: 10;
     pointer-events: none;
-    font-family: sans-serif;
-    letter-spacing: 1px;
+    font-size: 14px;
+    text-shadow: 0 0 10px #000;
+}
+
+/* --- 手机端自适应 --- */
+@media screen and (max-width: 768px) {
+    #play { width: 160px; height: 50px; line-height: 50px; font-size: 16px; }
+    
+    #audio-container {
+        flex-direction: column; 
+        padding: 10px 0 20px 0; 
+    }
+
+    #next-btn {
+        margin-right: 0;
+        margin-bottom: 10px;
+        width: 70%;
+        text-align: center;
+    }
+
+    audio { width: 90%; }
+
+    #info {
+        bottom: 130px; 
+        font-size: 12px;
+    }
 }
