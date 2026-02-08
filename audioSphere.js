@@ -20,8 +20,8 @@ orbit.enableDamping = true;
 
 // --- 2. R2 配置与音频设置 ---
 // 替换为你的 R2 公开 URL 或自定义域名
-const R2_BASE_URL = "https://your-r2-public-url.com/"; 
-const playlist = ["music1.mp3", "music2.mp3"]; // 填入你 R2 桶里的文件名
+const R2_BASE_URL = "https://music-api.uke.cc/"; 
+const playlist = ["music.mp3", "music2.mp3"]; // 填入你 R2 桶里的文件名
 
 const audioEl = document.getElementById('audio');
 const playBtn = document.getElementById('play');
