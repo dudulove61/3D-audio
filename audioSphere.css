@@ -1,54 +1,121 @@
-body { margin: 0; overflow: hidden; background: #000; }
-canvas { display: block; }
+/* 基础页面重置 */
+body { 
+    margin: 0; 
+    overflow: hidden; 
+    background: #000; 
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
 
+canvas { 
+    display: block; 
+}
+
+/* 播放器总容器 - 放置在页面左下角 */
 #player-ui {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-    text-align: center;
+    bottom: 40px;    /* 距离底部 */
+    left: 40px;      /* 距离左侧 */
+    z-index: 100;    /* 确保在最上层 */
+    text-align: left;
 }
 
+/* 初始状态：居中的大开启按钮（如果你希望开启前它在中间，可以保留之前的代码，
+   如果你希望它一开始就在左下角，请使用下面的样式） */
 #play {
-    padding: 15px 40px;
+    padding: 16px 45px;
     font-size: 18px;
-    background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+    font-weight: bold;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
     border: none;
     color: white;
-    border-radius: 30px;
+    border-radius: 50px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
 }
 
+#play:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 25px rgba(79, 172, 254, 0.5);
+}
+
+/* 播放中显示的控制面板 */
 #audio-container {
+    display: none; /* 初始隐藏，由 JS 切换 flex */
     flex-direction: column;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 20px;
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(5px);
-}
-
-#track-name {
-    color: #00f2fe;
-    font-family: 'Arial', sans-serif;
-    margin-bottom: 15px;
-    font-size: 14px;
-    letter-spacing: 1px;
-}
-
-#next-btn {
-    padding: 8px 20px;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid white;
-    color: white;
+    align-items: flex-start;
+    background: rgba(15, 15, 15, 0.7); /* 深色半透明 */
+    padding: 25px;
     border-radius: 20px;
-    cursor: pointer;
-    transition: 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px); /* 毛玻璃效果 */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    min-width: 280px;
 }
 
-#next-btn:hover { background: rgba(255, 255, 255, 0.4); }
+/* 歌名样式 */
+#track-name {
+    color: #fff;
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    max-width: 260px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 歌名太长显示省略号 */
+}
 
-audio { margin-top: 15px; height: 30px; opacity: 0.5; }
+#track-name::before {
+    content: "🎵 ";
+    margin-right: 5px;
+}
+
+/* 切歌按钮 */
+#next-btn {
+    padding: 8px 18px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #eee;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+#next-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #00f2fe;
+    color: #fff;
+}
+
+/* 这里的 div 容器包裹按钮，保持整齐 */
+#controls {
+    margin-bottom: 15px;
+}
+
+/* 原生播放条样式微调 */
+audio {
+    height: 32px;
+    width: 280px;
+    opacity: 0.8;
+    filter: invert(100%) hue-rotate(180deg) brightness(1.5); /* 将原生播放器反色，更适配深色主题 */
+}
+
+/* 适配移动端 */
+@media (max-width: 600px) {
+    #player-ui {
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+    }
+    #audio-container {
+        min-width: unset;
+        width: calc(100% - 40px);
+    }
+    audio {
+        width: 100%;
+    }
+}
