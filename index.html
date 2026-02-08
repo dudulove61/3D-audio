@@ -6,41 +6,28 @@
     <title>Cyber DJ Sphere</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; }
-        
-        /* 播放按钮样式 */
         #play { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             padding: 15px 30px; font-size: 18px; color: #00f2fe; 
             background: rgba(0, 0, 0, 0.7); border: 2px solid #00f2fe; 
             cursor: pointer; z-index: 100; font-weight: bold;
-            letter-spacing: 2px; box-shadow: 0 0 15px #00f2fe;
+            box-shadow: 0 0 15px #00f2fe;
         }
-
-        /* 底部播放器容器 */
         #audio-container { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: none; background: rgba(0, 242, 254, 0.1); 
-            padding: 10px; border-radius: 50px; backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 242, 254, 0.3);
+            display: none; background: rgba(0, 0, 0, 0.5); 
+            padding: 10px; border-radius: 50px; border: 1px solid #00f2fe;
         }
-        
-        audio { height: 40px; filter: invert(100%) hue-rotate(180deg); }
+        audio { height: 40px; filter: invert(100%); }
     </style>
 </head>
 <body>
-
     <button id="play">ENTER THE BEAT</button>
-
-    <div id="audio-container">
-        <audio id="audio" controls loop></audio>
-    </div>
+    <div id="audio-container"><audio id="audio" controls loop></audio></div>
 
     <script src="libs/three.min.js"></script>
-    
     <script src="libs/OrbitControl.js"></script>
     <script src="libs/stats.min.js"></script>
-
     <script src="audioSphere.js"></script>
-
 </body>
 </html>
