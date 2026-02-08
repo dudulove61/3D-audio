@@ -1,25 +1,27 @@
 /**
- * Cyber DJ - 核心逻辑
+ * Cyber DJ - 核心 3D 逻辑 (适配 R99)
  */
 
-// --- 1. 场景初始化 ---
+// --- 1. 基础场景设置 ---
 var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 限制像素比以优化性能
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 限制像素比提升性能
 document.body.appendChild(renderer.domElement);
 
-camera.position.z = window.innerWidth < 768 ? 400 : 280;
-camera.position.y = 50;
+// 根据设备调整相机初始距离
+camera.position.z = window.innerWidth < 768 ? 420 : 300;
+camera.position.y = 40;
 
 var orbit = new THREE.OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
+orbit.autoRotate = false;
 
 // --- 2. 粒子球体构建 ---
 var radius = 100;
 var isMobile = window.innerWidth < 768;
-var nbPoints = isMobile ? 2000 : 4000; // 移动端减半粒子数提升帧率
+var nbPoints = isMobile ? 2500 : 4500; // 移动端稍微减少点数
 
 var geometry = new THREE.BufferGeometry();
 var positions = new Float32Array(nbPoints * 3);
@@ -30,7 +32,7 @@ var step = 2 / nbPoints;
 for (var i = 0; i < nbPoints; i++) {
     var t = i * step - 1;
     var phi = Math.acos(t);
-    var theta = (120 * phi) % (2 * Math.PI);
+    var theta = (125 * phi) % (2 * Math.PI); // 稍微调整螺旋率
 
     var x = Math.cos(theta) * Math.sin(phi) * radius;
     var y = Math.cos(phi) * radius;
@@ -44,29 +46,34 @@ for (var i = 0; i < nbPoints; i++) {
 geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
 geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
 
+// --- 关键：使用你提供的 particle.png 贴图 ---
+var textureLoader = new THREE.TextureLoader();
+var particleTexture = textureLoader.load('res/particle.png');
+
 var particleMaterial = new THREE.PointsMaterial({
-    size: isMobile ? 6 : 4,
+    size: isMobile ? 8 : 6, // 使用贴图后尺寸可稍微加大
+    map: particleTexture,
+    blending: THREE.AdditiveBlending, // 开启叠加模式，实现发光效果
     transparent: true,
-    opacity: 0.8,
-    blending: THREE.AdditiveBlending,
     depthWrite: false,
-    vertexColors: THREE.VertexColors
+    vertexColors: THREE.VertexColors,
+    opacity: 0.9
 });
 
 var particleSystem = new THREE.Points(geometry, particleMaterial);
 scene.add(particleSystem);
 
-// --- 3. 音频逻辑 ---
+// --- 3. 音频逻辑与切歌 ---
 var analyser, frequencyData;
 var audioEl = document.getElementById('audio');
 var playBtn = document.getElementById('play');
 var nextBtn = document.getElementById('next-btn');
 var infoEl = document.getElementById('info');
 var audioContainer = document.getElementById('audio-container');
-var tempColor = new THREE.Color(); // 复用 Color 对象优化内存
+var tempColor = new THREE.Color(); // 复用颜色对象减少 GC 压力
 
 function fetchAndPlay() {
-    infoEl.innerText = "正在链接赛博空间...";
+    infoEl.innerText = "正在同步时空音频...";
     audioEl.src = "https://music-api.uke.cc/?t=" + Date.now();
     audioEl.load();
     
@@ -77,13 +84,13 @@ function fetchAndPlay() {
                 var fileName = decodeURIComponent(currentSrc.split('/').pop().split('?')[0]);
                 var cleanName = fileName.replace(/\.[^/.]+$/, ""); 
                 if (cleanName && !cleanName.includes("music-api")) {
-                    infoEl.innerText = "NOW PLAYING: " + cleanName;
+                    infoEl.innerText = "正在播放: " + cleanName;
                 }
             } catch(e) {}
         }, 800);
     }, { once: true });
 
-    audioEl.play().catch(function(){ infoEl.innerText = "点击下方按钮切歌"; });
+    audioEl.play().catch(function(err){ console.log("等待交互中..."); });
 }
 
 playBtn.addEventListener('click', function() {
@@ -118,17 +125,18 @@ function render() {
 
         for (var i = 0; i < nbPoints; i++) {
             var index = i % frequencyData.length;
-            // 增强低音跳动感：低频部分 factor 更大
-            var rawData = frequencyData[index];
-            var factor = (rawData / 255) * (index < 10 ? 3.5 : 2.0) + 1.0;
+            
+            // 低频部分增强震动感 (前 20 个频段通常是鼓点)
+            var weight = index < 20 ? 3.0 : 1.8;
+            var factor = (frequencyData[index] / 255) * weight + 1.0;
 
             posAttr.array[i * 3] = initialPositions[i * 3] * factor;
             posAttr.array[i * 3 + 1] = initialPositions[i * 3 + 1] * factor;
             posAttr.array[i * 3 + 2] = initialPositions[i * 3 + 2] * factor;
 
-            // 颜色随频率映射
-            var hue = (index / frequencyData.length) + (rawData / 512);
-            tempColor.setHSL(hue % 1, 0.8, 0.6);
+            // 基于频率的 HSL 变色：频率越高，色相偏移越大
+            var hue = (index / frequencyData.length) + (frequencyData[index] / 512);
+            tempColor.setHSL(hue % 1, 0.7, 0.6);
             colAttr.array[i * 3] = tempColor.r;
             colAttr.array[i * 3 + 1] = tempColor.g;
             colAttr.array[i * 3 + 2] = tempColor.b;
@@ -137,16 +145,16 @@ function render() {
         colAttr.needsUpdate = true;
     }
     
-    particleSystem.rotation.y += 0.002;
+    particleSystem.rotation.y += 0.003;
     orbit.update();
     renderer.render(scene, camera);
 }
 render();
 
-// 窗口适配
+// 窗口 resize
 window.addEventListener('resize', function() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.position.z = window.innerWidth < 768 ? 400 : 280;
+    camera.position.z = window.innerWidth < 768 ? 420 : 300;
 });
