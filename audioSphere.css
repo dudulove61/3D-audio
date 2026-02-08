@@ -1,56 +1,54 @@
-body { 
-    margin: 0; 
-    overflow: hidden; 
-    background: radial-gradient(circle at center, #1a0a2e 0%, #000000 100%); 
-}
+body { margin: 0; overflow: hidden; background: #000; }
+canvas { display: block; }
 
-/* 启动按钮：确保在最前方 */
-#play {
-    position: fixed; 
-    top: 50%; 
+#player-ui {
+    position: absolute;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 200px; 
-    height: 60px; 
-    line-height: 60px;
-    background: linear-gradient(45deg, #ff00cc, #3333ff);
-    color: white; 
-    border-radius: 30px; 
-    cursor: pointer;
-    text-align: center; 
-    font-family: "Microsoft YaHei", sans-serif; 
-    font-weight: bold;
-    font-size: 18px;
-    box-shadow: 0 0 40px rgba(255, 0, 204, 0.8); 
-    z-index: 9999; /* 极高级别，确保可见 */
-    display: block;
-}
-
-/* 底部播放器容器 */
-#audio-container {
-    position: fixed;
-    bottom: 0; /* 先设为 0，确保你能看到它 */
-    left: 0;
-    width: 100%;
-    background: rgba(0, 0, 0, 0.7); 
-    backdrop-filter: blur(15px);
-    padding: 15px 0;
-    display: none; /* 初始隐藏，点击 Play 后变为 flex */
-    justify-content: center;
-    z-index: 1000;
-}
-
-audio {
-    width: 80%;
-    filter: invert(1) hue-rotate(180deg);
-}
-
-#info {
-    position: fixed; 
-    bottom: 80px; 
-    width: 100%;
-    text-align: center; 
-    color: rgba(255,255,255,0.4); 
     z-index: 10;
-    pointer-events: none;
+    text-align: center;
 }
+
+#play {
+    padding: 15px 40px;
+    font-size: 18px;
+    background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    color: white;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+}
+
+#audio-container {
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+#track-name {
+    color: #00f2fe;
+    font-family: 'Arial', sans-serif;
+    margin-bottom: 15px;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+#next-btn {
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid white;
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#next-btn:hover { background: rgba(255, 255, 255, 0.4); }
+
+audio { margin-top: 15px; height: 30px; opacity: 0.5; }
