@@ -10,14 +10,14 @@ camera.position.y = 80;
 const orbit = new THREE.OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true; 
 
-/* 1. 材质升级：开启顶点颜色 */
+// 1. 材质：幻彩顶点着色
 const particleMaterial = new THREE.PointsMaterial({
     size: 5,
     map: new THREE.TextureLoader().load('res/particle.png'),
     blending: THREE.AdditiveBlending,
     transparent: true,
     depthWrite: false,
-    vertexColors: true // 允许粒子变色
+    vertexColors: true 
 });
 
 const particles = new THREE.Geometry();
@@ -34,20 +34,18 @@ for (let i = -1; i <= 1; i += step) {
     particle.y = particle.initY = Math.cos(phi) * radius;
     
     particles.vertices.push(particle);
-    // 初始化每个粒子的颜色
     particles.colors.push(new THREE.Color(0x00f2fe)); 
 }
 
 const particleSystem = new THREE.Points(particles, particleMaterial);
 scene.add(particleSystem);
 
-/* 音频逻辑 */
 let analyser, frequencyData;
 const audioEl = document.getElementById('audio');
 const playBtn = document.getElementById('play');
+const audioContainer = document.getElementById('audio-container');
 
 function fetchNewTrack() {
-    // 确保 Vercel 代理已配置
     audioEl.src = '/api/dj-stream?t=' + Date.now();
     audioEl.load();
 }
@@ -64,13 +62,14 @@ playBtn.addEventListener('click', () => {
     }
     fetchNewTrack();
     audioEl.play();
+
+    // 切换 UI 显示
     playBtn.style.display = 'none';
-    audioEl.style.display = 'block';
+    audioContainer.style.display = 'flex'; 
 });
 
 audioEl.onended = () => { fetchNewTrack(); audioEl.play(); };
 
-/* 2. 渲染逻辑：动态幻彩跳动 */
 function render() {
     requestAnimationFrame(render);
     if (frequencyData) {
@@ -79,21 +78,17 @@ function render() {
             let p = particles.vertices[i];
             const index = i % frequencyData.length;
             const amp = frequencyData[index];
-            
-            // 灵敏度增强
             const factor = (amp / 255) * 2.2 + 1;
             p.x = p.initX * factor;
             p.y = p.initY * factor;
             p.z = p.initZ * factor;
 
-            // 变色逻辑：根据频率切换色相 (HSL)
             let hue = (index / frequencyData.length) + (amp / 512);
             particles.colors[i].setHSL(hue % 1, 0.7, 0.6); 
         }
         particleSystem.geometry.verticesNeedUpdate = true;
         particleSystem.geometry.colorsNeedUpdate = true;
     }
-    // 双轴旋转，更具空间感
     particleSystem.rotation.y += 0.003;
     particleSystem.rotation.x += 0.001;
     orbit.update();
