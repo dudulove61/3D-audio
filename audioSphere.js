@@ -1,70 +1,22 @@
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-camera.position.z = 270;
-camera.position.y = 100;
-
-const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-orbit.enableDamping = true; 
-
-// 粒子材质
+/* 1. 材质升级：开启顶点着色 (vertexColors) */
 const particleMaterial = new THREE.PointsMaterial({
-    color: 0x00f2fe,
-    size: 4,
+    size: 5,
     map: new THREE.TextureLoader().load('res/particle.png'),
     blending: THREE.AdditiveBlending,
     transparent: true,
-    depthWrite: false
+    depthWrite: false,
+    vertexColors: true // 允许每个粒子有独立颜色
 });
 
-const particles = new THREE.Geometry();
-const radius = 100;
-const nbPoints = 4000;
-const step = 2 / nbPoints;
+// 在循环创建粒子的地方，给每个粒子初始化一个颜色
 for (let i = -1; i <= 1; i += step) {
-    const phi = Math.acos(i);
-    const theta = (120 * phi) % (2 * Math.PI);
-    const particle = new THREE.Vector3();
-    particle.x = particle.initX = Math.cos(theta) * Math.sin(phi) * radius;
-    particle.z = particle.initZ = Math.sin(theta) * Math.sin(phi) * radius;
-    particle.y = particle.initY = Math.cos(phi) * radius;
+    // ... 原有的坐标计算代码保持不变 ...
     particles.vertices.push(particle);
+    // 新增：初始化颜色（默认白色）
+    particles.colors.push(new THREE.Color(0xffffff)); 
 }
 
-const particleSystem = new THREE.Points(particles, particleMaterial);
-scene.add(particleSystem);
-
-let analyser, frequencyData;
-const audioEl = document.getElementById('audio');
-const playBtn = document.getElementById('play');
-
-// 使用 Vercel 代理路径
-function fetchNewTrack() {
-    audioEl.src = '/api/dj-stream?t=' + Date.now();
-    audioEl.load();
-}
-
-playBtn.addEventListener('click', () => {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (!analyser) {
-        analyser = audioCtx.createAnalyser();
-        const source = audioCtx.createMediaElementSource(audioEl);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-        analyser.fftSize = 1024; 
-        frequencyData = new Uint8Array(analyser.frequencyBinCount);
-    }
-    fetchNewTrack();
-    audioEl.play();
-    playBtn.style.display = 'none';
-    audioEl.style.display = 'block';
-});
-
-audioEl.onended = () => { fetchNewTrack(); audioEl.play(); };
-
+/* 2. 渲染逻辑升级：动态幻彩 */
 function render() {
     requestAnimationFrame(render);
     if (frequencyData) {
@@ -72,22 +24,23 @@ function render() {
         for (let i = 0; i < particles.vertices.length; i++) {
             let p = particles.vertices[i];
             const index = i % frequencyData.length;
-            // 调整灵敏度：1.8 是放大倍数，你可以根据喜好调整
-            const factor = (frequencyData[index] / 255) * 1.8 + 1;
+            const amp = frequencyData[index];
+            const factor = (amp / 255) * 2.0 + 1; // 增强跳动幅度
+
             p.x = p.initX * factor;
             p.y = p.initY * factor;
             p.z = p.initZ * factor;
+
+            // 动态变色逻辑：根据频率切换颜色（从青色到紫色）
+            let hue = (index / frequencyData.length) + (amp / 255);
+            particles.colors[i].setHSL(hue % 1, 0.8, 0.6); 
         }
         particleSystem.geometry.verticesNeedUpdate = true;
+        particleSystem.geometry.colorsNeedUpdate = true; // 告知系统颜色已更新
     }
-    particleSystem.rotation.y += 0.002;
+    // 让球体绕 X 和 Y 轴同时旋转，更有空间感
+    particleSystem.rotation.y += 0.003;
+    particleSystem.rotation.x += 0.001;
     orbit.update();
     renderer.render(scene, camera);
 }
-render();
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
