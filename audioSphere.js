@@ -1,5 +1,6 @@
 /**
- * Cyber DJ - audioSphere.js (通用兼容版)
+ * Cyber DJ - audioSphere.js
+ * 适配 R99, 支持自动/手动切歌及歌名解析
  */
 
 // --- 1. 基础场景设置 ---
@@ -13,11 +14,10 @@ document.body.appendChild(renderer.domElement);
 camera.position.z = 280;
 camera.position.y = 80;
 
-// 控制器 (确保路径正确：libs/OrbitControl.js)
 var orbit = new THREE.OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
 
-// --- 2. 粒子球体构建 (使用 addAttribute 兼容老版本) ---
+// --- 2. 粒子球体构建 ---
 var radius = 100;
 var nbPoints = 4000;
 var positions = new Float32Array(nbPoints * 3);
@@ -46,7 +46,6 @@ for (var i = 0; i < nbPoints; i++) {
     colors[i * 3 + 2] = color.b;
 }
 
-// 🚨 关键修正：同时尝试两种方法，确保任何版本都不报错
 if (geometry.setAttribute) {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -61,23 +60,42 @@ var particleMaterial = new THREE.PointsMaterial({
     blending: THREE.AdditiveBlending,
     transparent: true,
     depthWrite: false,
-    vertexColors: THREE.VertexColors // 老版本写法
+    vertexColors: THREE.VertexColors 
 });
 
 var particleSystem = new THREE.Points(geometry, particleMaterial);
 scene.add(particleSystem);
 
-// --- 3. 音频与 Worker 联动 ---
+// --- 3. 音频逻辑与切歌功能 ---
 var analyser, frequencyData;
 var audioEl = document.getElementById('audio');
 var playBtn = document.getElementById('play');
+var nextBtn = document.getElementById('next-btn');
+var infoEl = document.getElementById('info');
 var audioContainer = document.getElementById('audio-container');
 var RANDOM_API = "https://music-api.uke.cc/";
 
-function fetchNewTrack() {
-    audioEl.crossOrigin = "anonymous";
+function fetchAndPlay() {
+    infoEl.innerText = "正在同步时空音频...";
+    // 加随机参数防止浏览器缓存同一首歌
     audioEl.src = RANDOM_API + "?t=" + Date.now();
     audioEl.load();
+    
+    // 监听重定向后的真实文件名
+    audioEl.addEventListener('loadstart', function() {
+        setTimeout(function() {
+            try {
+                var currentSrc = audioEl.currentSrc || audioEl.src;
+                var fileName = decodeURIComponent(currentSrc.split('/').pop().split('?')[0]);
+                var cleanName = fileName.replace(/\.[^/.]+$/, ""); 
+                if (cleanName && !cleanName.includes("music-api")) {
+                    infoEl.innerText = "正在播放: " + cleanName;
+                }
+            } catch(e) {}
+        }, 800);
+    }, { once: true });
+
+    audioEl.play().catch(function(err){ console.log("等待交互中..."); });
 }
 
 playBtn.addEventListener('click', function() {
@@ -89,18 +107,19 @@ playBtn.addEventListener('click', function() {
         var source = audioCtx.createMediaElementSource(audioEl);
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
-        analyser.fftSize = 1024;
+        analyser.fftSize = 512;
         frequencyData = new Uint8Array(analyser.frequencyBinCount);
     }
     
-    fetchNewTrack();
-    audioEl.play().then(function() {
-        playBtn.style.display = 'none';
-        if(audioContainer) audioContainer.style.display = 'flex';
-    }).catch(function(err) { console.error("播放失败:", err); });
+    fetchAndPlay();
+    playBtn.style.display = 'none';
+    audioContainer.style.display = 'flex';
 });
 
-audioEl.onended = function() { fetchNewTrack(); audioEl.play(); };
+// 绑定切歌按钮
+nextBtn.addEventListener('click', fetchAndPlay);
+// 歌曲结束自动下一曲
+audioEl.onended = fetchAndPlay;
 
 // --- 4. 渲染循环 ---
 function render() {
