@@ -1,11 +1,11 @@
 /**
- * Cyber DJ - audioSphere.js
- * 适配 Three.js R99 版本，支持歌名解析与切歌
+ * Cyber DJ - audioSphere.js (最终修复版)
+ * 功能：3D粒子律动、R99版本兼容、重定向歌名捕获、切歌功能
  */
 
-// --- 1. 变量配置 ---
-var RANDOM_API = "https://music-api.uke.cc/"; // 你的 Worker 地址
-var nbPoints = 4000; // 粒子数量
+// --- 1. 基础配置 ---
+var RANDOM_API = "https://music-api.uke.cc/"; 
+var nbPoints = 4000; 
 var scene, camera, renderer, orbit, geometry, particleSystem;
 var analyser, frequencyData, initialPositions;
 
@@ -26,6 +26,7 @@ function initScene() {
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
 
+    // 控制器
     orbit = new THREE.OrbitControls(camera, renderer.domElement);
     orbit.enableDamping = true;
 
@@ -33,7 +34,7 @@ function initScene() {
     render();
 }
 
-// --- 3. 创建粒子球 (R99 兼容写法) ---
+// --- 3. 创建粒子球 (适配 R99 addAttribute) ---
 function createParticles() {
     var radius = 100;
     var positions = new Float32Array(nbPoints * 3);
@@ -62,7 +63,7 @@ function createParticles() {
         colors[i * 3 + 2] = color.b;
     }
 
-    // R99 兼容性处理：优先使用 addAttribute
+    // 适配 R99 版本的属性添加方式
     var posAttr = new THREE.BufferAttribute(positions, 3);
     var colAttr = new THREE.BufferAttribute(colors, 3);
     
@@ -76,7 +77,7 @@ function createParticles() {
 
     var material = new THREE.PointsMaterial({
         size: 4,
-        map: new THREE.TextureLoader().load('res/particle.png'),
+        map: new THREE.TextureLoader().load('res/particle.png'), // 请确保有此贴图，或改为普通点
         blending: THREE.AdditiveBlending,
         transparent: true,
         depthWrite: false,
@@ -87,20 +88,41 @@ function createParticles() {
     scene.add(particleSystem);
 }
 
-// --- 4. 音频处理逻辑 ---
+// --- 4. 音乐获取与歌名解析 (修复重定向捕获) ---
 function fetchNewTrack() {
     audioEl.crossOrigin = "anonymous";
-    // 强制刷新缓存，否则可能一直播同一首歌
-    audioEl.src = RANDOM_API + "?t=" + Date.now(); 
+    // 强制不缓存请求
+    var requestUrl = RANDOM_API + "?t=" + Date.now();
+    audioEl.src = requestUrl;
     audioEl.load();
 
-    // 自动解析歌名
-    audioEl.onloadedmetadata = function() {
-        var fileName = audioEl.src.split('/').pop().split('?')[0];
-        trackNameEl.innerText = "正在播： " + decodeURIComponent(fileName);
+    // 核心修复：监听音频开始加载，等待重定向完成后抓取真实地址
+    var nameUpdateHandler = function() {
+        setTimeout(function() {
+            try {
+                // currentSrc 是重定向后的最终文件地址
+                var currentSrc = audioEl.currentSrc || audioEl.src;
+                var urlObj = new URL(currentSrc);
+                var fileName = urlObj.pathname.split('/').pop();
+                
+                // 解码并去掉后缀
+                var cleanName = decodeURIComponent(fileName).replace(/\.[^/.]+$/, "");
+                
+                if (cleanName && cleanName !== "" && !cleanName.includes("music-api")) {
+                    trackNameEl.innerText = cleanName;
+                } else {
+                    trackNameEl.innerText = "未知旋律 (正在播放)";
+                }
+            } catch (e) {
+                trackNameEl.innerText = "电音律动中...";
+            }
+        }, 600); // 延迟600ms确保重定向完成
     };
+
+    audioEl.addEventListener('loadstart', nameUpdateHandler, { once: true });
 }
 
+// --- 5. 事件绑定 ---
 playBtn.addEventListener('click', function() {
     var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -110,7 +132,7 @@ playBtn.addEventListener('click', function() {
         var source = audioCtx.createMediaElementSource(audioEl);
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
-        analyser.fftSize = 1024;
+        analyser.fftSize = 512;
         frequencyData = new Uint8Array(analyser.frequencyBinCount);
     }
     
@@ -118,56 +140,4 @@ playBtn.addEventListener('click', function() {
     audioEl.play().then(function() {
         playBtn.style.display = 'none';
         audioContainer.style.display = 'flex';
-    });
-});
-
-nextBtn.addEventListener('click', function() {
-    nextBtn.innerText = "切歌中...";
-    fetchNewTrack();
-    audioEl.play().then(function() {
-        nextBtn.innerText = "切换下一首";
-    });
-});
-
-// --- 5. 渲染循环 ---
-function render() {
-    requestAnimationFrame(render);
-    
-    if (frequencyData) {
-        analyser.getByteFrequencyData(frequencyData);
-        // R99 版本兼容性获取属性方式
-        var posAttr = geometry.getAttribute ? geometry.getAttribute('position') : geometry.attributes.position;
-        var colAttr = geometry.getAttribute ? geometry.getAttribute('color') : geometry.attributes.color;
-
-        for (var i = 0; i < nbPoints; i++) {
-            var index = i % frequencyData.length;
-            var factor = (frequencyData[index] / 255) * 2.2 + 1;
-
-            posAttr.array[i * 3] = initialPositions[i * 3] * factor;
-            posAttr.array[i * 3 + 1] = initialPositions[i * 3 + 1] * factor;
-            posAttr.array[i * 3 + 2] = initialPositions[i * 3 + 2] * factor;
-
-            var hue = (index / frequencyData.length) + (frequencyData[index] / 512);
-            var color = new THREE.Color().setHSL(hue % 1, 0.8, 0.6);
-            colAttr.array[i * 3] = color.r;
-            colAttr.array[i * 3 + 1] = color.g;
-            colAttr.array[i * 3 + 2] = color.b;
-        }
-        posAttr.needsUpdate = true;
-        colAttr.needsUpdate = true;
-    }
-    
-    particleSystem.rotation.y += 0.003;
-    orbit.update();
-    renderer.render(scene, camera);
-}
-
-// 窗口大小自适应
-window.addEventListener('resize', function() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// 启动场景
-initScene();
+    }).catch(function(e) { console
