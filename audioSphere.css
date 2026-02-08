@@ -1,50 +1,56 @@
-body { 
-    margin: 0; 
-    overflow: hidden; 
-    background: radial-gradient(circle at center, #1a0a2e 0%, #000000 100%); 
-}
-
-/* 居中的启动按钮 */
-#play {
-    position: fixed; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 180px; height: 50px; line-height: 50px;
-    background: linear-gradient(45deg, #ff00cc, #3333ff);
-    color: white; border-radius: 25px; cursor: pointer;
-    text-align: center; font-family: "Microsoft YaHei", sans-serif; font-weight: bold;
-    box-shadow: 0 0 30px rgba(255,0,204,0.6); z-index: 100;
-    transition: all 0.3s;
-}
-#play:hover { transform: translate(-50%, -50%) scale(1.1); }
-
-/* 底部播放器容器 */
+/* 底部播放器容器 - 初始状态 */
 #audio-container {
     position: fixed;
-    bottom: 0;
+    bottom: -60px; /* 初始状态：完全隐藏在屏幕下方 */
     left: 0;
     width: 100%;
-    background: rgba(0, 0, 0, 0.5); /* 半透明黑底 */
-    backdrop-filter: blur(10px);    /* 毛玻璃效果 */
-    padding: 10px 0;
-    display: none; /* 初始隐藏，点击 Play 后显示 */
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(15px);    /* 增加磨砂感 */
+    padding: 15px 0;
+    display: none; /* 初始逻辑隐藏，点击Play后转为 flex */
     justify-content: center;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
     z-index: 99;
+    
+    /* 核心：平滑过渡效果 */
+    transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 }
 
+/* 当鼠标移入屏幕底部 100px 范围内时，触发显现 */
+/* 为了让感应区域更大，我们监听 body 的 hover 或者增加一个感应层 */
+body:hover #audio-container {
+    bottom: 0; /* 鼠标移入页面时升起 */
+}
+
+/* 另一种方案：精准感应 */
+/* 如果你只想鼠标靠近底部才显现，就把上面那个替换为这个： */
+#audio-container:hover {
+    bottom: 0;
+}
+
+/* 调整控制条样式 */
 audio {
-    width: 80%;
+    width: 70%;
     height: 35px;
-    filter: invert(1) hue-rotate(180deg) brightness(1.5); /* 调成冷色调匹配 UI */
+    opacity: 0.8;
+    transition: opacity 0.3s;
+    filter: invert(1) hue-rotate(180deg) brightness(1.2);
+}
+audio:hover {
+    opacity: 1;
 }
 
+/* 提示文字也跟着动，避免被遮挡 */
 #info {
     position: fixed; 
-    bottom: 60px; /* 避开底部的播放器 */
+    bottom: 20px; 
     width: 100%;
     text-align: center; 
-    color: rgba(255,255,255,0.4); 
-    font-family: sans-serif; 
-    font-size: 12px;
+    color: rgba(255,255,255,0.3); 
+    font-size: 11px;
+    transition: bottom 0.5s;
     pointer-events: none;
+}
+body:hover #info {
+    bottom: 80px; /* 播放器出来时，文字向上躲避 */
 }
