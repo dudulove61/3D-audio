@@ -2,19 +2,21 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>Cyber DJ Sphere</title>
+        <title>Cyber DJ Sphere - Aurora</title>
         <link rel="stylesheet" href="audioSphere.css" />
     </head>
     <body>
-        <div id="play">PLAY DJ</div>
-        <audio id="audio" crossorigin="anonymous" controls></audio>
+        <div id="play">开启幻彩 DJ</div>
         
-        <div id="info">鼠标拖动旋转 | 滚轮缩放</div>
+        <div id="audio-container">
+            <audio id="audio" crossorigin="anonymous" controls></audio>
+        </div>
+        
+        <div id="info">鼠标拖动旋转 | 滚轮缩放 | 粒子随频率变色</div>
 
         <script src="libs/three.min.js"></script>
         <script src="libs/stats.min.js"></script>
         <script src="libs/OrbitControl.js"></script>
-
         <script src="audioSphere.js"></script>
     </body>
 </html>
