@@ -1,120 +1,141 @@
-body { 
-    margin: 0; 
-    overflow: hidden; 
-    /* 解决安卓高度偏移：使用动态视口高度 */
-    height: 100vh;
-    height: 100dvh; 
-    background: radial-gradient(circle at center, #1a0a2e 0%, #000000 100%); 
-}
+/**
+ * Cyber DJ - 核心 3D 逻辑 (适配 DuckDuckGo & iOS)
+ */
 
-/* 启动按钮 */
-#play {
-    position: fixed; 
-    top: 50%; 
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 200px; 
-    height: 60px; 
-    line-height: 60px;
-    background: linear-gradient(45deg, #ff00cc, #3333ff);
-    color: white; 
-    border-radius: 30px; 
-    cursor: pointer;
-    text-align: center; 
-    font-family: "Microsoft YaHei", sans-serif; 
-    font-weight: bold;
-    font-size: 18px;
-    box-shadow: 0 0 40px rgba(255, 0, 204, 0.8); 
-    z-index: 9999;
-    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-#play:hover {
-    transform: translate(-50%, -50%) scale(1.1);
-}
-
-/* 底部播放器容器 */
-#audio-container {
-    position: fixed;
-    bottom: 0; 
-    left: 0;
-    width: 100%;
-    background: rgba(0, 0, 0, 0.7); 
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    padding: 15px 0;
-    display: none; 
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-/* 下一曲按钮 */
-#next-btn {
-    color: #00f2fe;
-    border: 1px solid #00f2fe;
-    padding: 6px 18px;
-    margin-right: 20px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.3s;
-    white-space: nowrap;
-    text-shadow: 0 0 5px #00f2fe;
-    font-weight: bold;
-}
-
-#next-btn:hover {
-    background: #00f2fe;
-    color: #000;
-    box-shadow: 0 0 15px #00f2fe;
-}
-
-audio {
-    width: 60%;
-    filter: invert(1) hue-rotate(180deg) brightness(1.4);
-}
-
-#info {
-    position: fixed; 
-    bottom: 80px; 
-    width: 100%;
-    text-align: center; 
-    color: rgba(255,255,255,0.6); 
-    z-index: 10;
-    pointer-events: none;
-    font-size: 13px;
-    letter-spacing: 1px;
-    text-shadow: 0 0 10px #000;
-}
-
-/* --- 安卓 & 手机端自适应优化 --- */
-@media screen and (max-width: 768px) {
-    #play { width: 160px; height: 50px; line-height: 50px; font-size: 16px; }
+// 1. iOS 环境强制适配
+function setupEnvironment() {
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    var audioEl = document.getElementById('audio');
     
-    #audio-container { 
-        flex-direction: column; 
-        /* 增加底部 Padding，防止被安卓系统导航栏遮挡 */
-        padding: 10px 0 35px 0; 
+    if (isIOS) {
+        document.body.classList.add('is-ios');
+        // 彻底移除原生控件，防止音量条出现
+        audioEl.removeAttribute('controls');
+        console.log("iOS 环境：原生控件已移除");
     }
-    
-    #next-btn { 
-        margin-right: 0; 
-        /* 增加与播放器的间距 */
-        margin-bottom: 15px; 
-        width: 80%; 
-        text-align: center; 
-    }
-    
-    audio { width: 90%; }
-    
-    /* 抬高提示文字，防止在窄屏安卓机上重叠 */
-    #info { bottom: 160px; font-size: 11px; }
 }
 
-/* 苹果手机特殊隐藏 */
-.is-ios audio::-webkit-media-controls-volume-slider,
-.is-ios audio::-webkit-media-controls-mute-button,
-.is-ios audio::-webkit-media-controls-volume-control-container {
-    display: none !important;
+// 确保在音频对象存在后运行
+window.addEventListener('DOMContentLoaded', setupEnvironment);
+
+// --- 2. 基础场景设置 (保持原样) ---
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+document.body.appendChild(renderer.domElement);
+
+camera.position.z = window.innerWidth < 768 ? 420 : 300;
+camera.position.y = 40;
+
+var orbit = new THREE.OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true;
+
+// --- 3. 粒子球体构建 (保持原样) ---
+var radius = 100;
+var isMobile = window.innerWidth < 768;
+var nbPoints = isMobile ? 2500 : 4500; 
+
+var geometry = new THREE.BufferGeometry();
+var positions = new Float32Array(nbPoints * 3);
+var initialPositions = new Float32Array(nbPoints * 3);
+var colors = new Float32Array(nbPoints * 3);
+
+var step = 2 / nbPoints;
+for (var i = 0; i < nbPoints; i++) {
+    var t = i * step - 1;
+    var phi = Math.acos(t);
+    var theta = (125 * phi) % (2 * Math.PI); 
+    var x = Math.cos(theta) * Math.sin(phi) * radius;
+    var y = Math.cos(phi) * radius;
+    var z = Math.sin(theta) * Math.sin(phi) * radius;
+    positions[i * 3] = initialPositions[i * 3] = x;
+    positions[i * 3 + 1] = initialPositions[i * 3 + 1] = y;
+    positions[i * 3 + 2] = initialPositions[i * 3 + 2] = z;
 }
+geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+var textureLoader = new THREE.TextureLoader();
+var particleTexture = textureLoader.load('res/particle.png');
+var particleMaterial = new THREE.PointsMaterial({
+    size: isMobile ? 8 : 6, 
+    map: particleTexture,
+    blending: THREE.AdditiveBlending, 
+    transparent: true,
+    depthWrite: false,
+    vertexColors: THREE.VertexColors,
+    opacity: 0.9
+});
+var particleSystem = new THREE.Points(geometry, particleMaterial);
+scene.add(particleSystem);
+
+// --- 4. 音频逻辑与切歌 (保持原样) ---
+var analyser, frequencyData;
+var audioEl = document.getElementById('audio');
+var playBtn = document.getElementById('play');
+var nextBtn = document.getElementById('next-btn');
+var infoEl = document.getElementById('info');
+var audioContainer = document.getElementById('audio-container');
+var tempColor = new THREE.Color(); 
+
+function fetchAndPlay() {
+    infoEl.innerText = "正在同步时空音频...";
+    audioEl.crossOrigin = "anonymous";
+    audioEl.src = "https://music-api.uke.cc/?t=" + Date.now();
+    audioEl.load();
+    audioEl.play().catch(function(err){ console.log("等待交互..."); });
+}
+
+playBtn.addEventListener('click', function() {
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!analyser) {
+        analyser = audioCtx.createAnalyser();
+        var source = audioCtx.createMediaElementSource(audioEl);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        analyser.fftSize = 512;
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    }
+    fetchAndPlay();
+    playBtn.style.display = 'none';
+    audioContainer.style.display = 'flex';
+});
+
+nextBtn.addEventListener('click', fetchAndPlay);
+audioEl.onended = fetchAndPlay;
+
+// --- 5. 渲染循环 (保持原样) ---
+function render() {
+    requestAnimationFrame(render);
+    if (frequencyData) {
+        analyser.getByteFrequencyData(frequencyData);
+        var posAttr = geometry.attributes.position;
+        var colAttr = geometry.attributes.color;
+        for (var i = 0; i < nbPoints; i++) {
+            var index = i % frequencyData.length;
+            var factor = (frequencyData[index] / 255) * (index < 20 ? 3.0 : 1.8) + 1.0;
+            posAttr.array[i * 3] = initialPositions[i * 3] * factor;
+            posAttr.array[i * 3 + 1] = initialPositions[i * 3 + 1] * factor;
+            posAttr.array[i * 3 + 2] = initialPositions[i * 3 + 2] * factor;
+            var hue = (index / frequencyData.length) + (frequencyData[index] / 512);
+            tempColor.setHSL(hue % 1, 0.7, 0.6);
+            colAttr.array[i * 3] = tempColor.r;
+            colAttr.array[i * 3 + 1] = tempColor.g;
+            colAttr.array[i * 3 + 2] = tempColor.b;
+        }
+        posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+    }
+    particleSystem.rotation.y += 0.003;
+    orbit.update();
+    renderer.render(scene, camera);
+}
+render();
+
+window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
