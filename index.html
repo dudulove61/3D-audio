@@ -2,17 +2,20 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cyber DJ - 幻彩音波</title>
     <link rel="stylesheet" href="audioSphere.css" />
 </head>
 <body>
     <div id="play">开启幻彩 DJ</div>
+    
     <div id="audio-container">
         <div id="next-btn">下一曲 ❯</div>
         <audio id="audio" crossorigin="anonymous" controls></audio>
     </div>
+    
     <div id="info">鼠标/触屏拖动旋转 | 滚轮/双指缩放</div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r99/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.99.0/examples/js/controls/OrbitControls.js"></script>
     <script src="audioSphere.js"></script>
