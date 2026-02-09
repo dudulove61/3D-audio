@@ -93,3 +93,10 @@ audio {
     audio { width: 90%; }
     #info { bottom: 140px; font-size: 11px; }
 }
+
+/* --- [新增] 苹果手机隐藏音量/静音功能 --- */
+.is-ios audio::-webkit-media-controls-volume-slider,
+.is-ios audio::-webkit-media-controls-mute-button,
+.is-ios audio::-webkit-media-controls-volume-control-container {
+    display: none !important;
+}
